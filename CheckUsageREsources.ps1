@@ -14,6 +14,16 @@
     General notes
 #>
 
+param(
+    [Parameter(Mandatory=$true)] 
+    [int]$MaxCpu,
+    [Parameter(Mandatory=$true)] 
+    [int]$MaxRam
+)
+
+$MaxCpu = 123
+$MaxRam = 11
+
 #Get Logon Users
 Add-Type -AssemblyName System.DirectoryServices.AccountManagement
 $Users = [System.DirectoryServices.AccountManagement.UserPrincipal]::Current | Select-Object Name,SID
@@ -33,16 +43,23 @@ foreach ($user in $users){
     $Item | Add-Member NoteProperty MBTotal     $USerMB
     $Summary.Add($item) |Out-Null
 }
-$Summary
 
+#Show warning message 
+foreach ($user in $Summary){
+    $NeedToWarninig = $false
 
+    if (($user.CPUTotal -gt $MaxCpu) -and ($User.MBTotal -lt $MaxRam)){
+        $MessageBody = "Check your CPU"
+        $NeedToWarninig = $true
+     } 
+    if (($user.CPUTotal -lt $MaxCpu) -and ($User.MBTotal -gt $MaxRam)){
+        $MessageBody = "Check your Ram"
+        $NeedToWarninig = $true
+     } 
+    if (($user.CPUTotal -gt $MaxCpu) -and ($User.MBTotal -gt $MaxRam)){
+        $MessageBody = "Check your CPU and Ram"
+        $NeedToWarninig = $true
+     } 
 
-
-
-
-
-([wmi]"").ConvertToDateTime((Get-WmiObject -Class Win32_UserProfile | Where-Object SID -eq $user.SID).LastUseTime)
-
-
-$wmi = Get-WmiObject -Class Win32_UserProfile | Where-Object SID -eq $user.SID
-$wmi
+     if ($NeedToWarninig -eq $true){msg $user.userName /server:localhost "$MessageBody"}
+}
